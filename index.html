@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hiking Trail Elevation &amp; Grade Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-teal-50 min-h-screen text-gray-800">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <header class="mb-8 text-center">
+      <h1 class="text-3xl font-bold text-teal-700">⛰️ Trail Elevation Calculator</h1>
+      <p class="text-teal-500 mt-1">Enter waypoints to compute grade, difficulty, time, and calories</p>
+    </header>
+
+    <!-- Pace Slider -->
+    <div class="bg-white rounded-xl shadow p-5 mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-gray-600">Hiking Pace</h2>
+        <span id="paceLabel" class="text-sm font-bold text-teal-600">Moderate (3.5 km/h)</span>
+      </div>
+      <input type="range" id="paceSlider" min="1" max="6" step="0.5" value="3.5"
+        class="w-full accent-teal-500" aria-label="Hiking pace in km per hour" />
+      <div class="flex justify-between text-xs text-gray-400 mt-1">
+        <span>Slow (1 km/h)</span><span>Fast (6 km/h)</span>
+      </div>
+    </div>
+
+    <!-- Body Weight for Calories -->
+    <div class="bg-white rounded-xl shadow p-5 mb-5">
+      <div class="flex items-center gap-4">
+        <div>
+          <label for="bodyWeight" class="block text-sm font-medium text-gray-600 mb-1">Body Weight (kg)</label>
+          <input type="number" id="bodyWeight" min="30" max="200" placeholder="70" value="70"
+            class="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            aria-label="Body weight in kilograms" />
+        </div>
+        <p class="text-xs text-gray-400 mt-4">Used for calorie burn estimate</p>
+      </div>
+    </div>
+
+    <!-- Waypoints -->
+    <div class="bg-white rounded-xl shadow p-5 mb-5">
+      <h2 class="text-sm font-semibold text-gray-600 mb-3">Waypoints</h2>
+      <div class="grid grid-cols-3 gap-2 mb-2 text-xs text-gray-400">
+        <div>Name</div>
+        <div>Elevation (m)</div>
+        <div>Distance from prev (km)</div>
+      </div>
+      <div id="waypointsList" class="space-y-2"></div>
+      <button id="addWpBtn" class="mt-3 text-sm text-teal-500 hover:text-teal-700" aria-label="Add waypoint">
+        + Add Waypoint
+      </button>
+    </div>
+
+    <!-- Calculate Button -->
+    <button id="calcBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-xl mb-6 transition-colors" aria-label="Calculate trail statistics">
+      Calculate
+    </button>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-4 gap-3 mb-6">
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Total Ascent</div>
+        <div id="totalAscent" class="text-xl font-bold text-green-600">—</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Total Descent</div>
+        <div id="totalDescent" class="text-xl font-bold text-red-500">—</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Max Grade</div>
+        <div id="maxGrade" class="text-xl font-bold text-orange-500">—</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Difficulty</div>
+        <div id="difficulty" class="text-xl font-bold text-teal-600">—</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-6">
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Total Distance</div>
+        <div id="totalDist" class="text-xl font-bold text-gray-700">—</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Est. Time</div>
+        <div id="estTime" class="text-xl font-bold text-blue-600">—</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500 mb-1">Calorie Burn</div>
+        <div id="calories" class="text-xl font-bold text-purple-600">—</div>
+      </div>
+    </div>
+
+    <!-- Elevation Profile (simple) -->
+    <div class="bg-white rounded-xl shadow p-5 mb-6">
+      <h2 class="text-sm font-semibold text-gray-600 mb-3">Elevation Profile</h2>
+      <div id="elevProfile" class="relative h-24 flex items-end gap-0.5 overflow-hidden" aria-label="Elevation profile chart">
+        <p class="text-xs text-gray-300 m-auto">Add waypoints and calculate</p>
+      </div>
+    </div>
+
+    <!-- Waypoint Table + Export -->
+    <div class="bg-white rounded-xl shadow p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-gray-600">Waypoint Table</h2>
+        <button id="exportBtn" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-lg" aria-label="Export waypoint table as CSV">Export CSV</button>
+      </div>
+      <div id="waypointTable" class="overflow-x-auto">
+        <p class="text-xs text-gray-300 text-center py-4">Calculate to populate table</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'hikingCalc_v1';
+
+    function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+    function save(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {} }
+
+    const defaultWaypoints = [
+      { name: 'Trailhead', elevation: 450, dist: 0 },
+      { name: 'Ridge Junction', elevation: 820, dist: 2.3 },
+      { name: 'Summit', elevation: 1145, dist: 1.8 },
+      { name: 'Valley Camp', elevation: 780, dist: 2.1 },
+      { name: 'Return Trail End', elevation: 455, dist: 3.4 }
+    ];
+
+    function addWaypointRow(wp) {
+      const list = document.getElementById('waypointsList');
+      const row = document.createElement('div');
+      row.className = 'waypoint-row grid grid-cols-3 gap-2 items-center';
+
+      const nameInp = document.createElement('input');
+      nameInp.type = 'text';
+      nameInp.value = wp?.name || '';
+      nameInp.placeholder = 'Waypoint name';
+      nameInp.setAttribute('aria-label', 'Waypoint name');
+      nameInp.className = 'border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-300';
+
+      const elevInp = document.createElement('input');
+      elevInp.type = 'number';
+      elevInp.value = wp?.elevation ?? '';
+      elevInp.placeholder = '450';
+      elevInp.setAttribute('aria-label', 'Elevation in meters');
+      elevInp.className = 'border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-300';
+
+      const distInp = document.createElement('input');
+      distInp.type = 'number';
+      distInp.value = wp?.dist ?? '';
+      distInp.min = '0'; distInp.step = '0.01';
+      distInp.placeholder = '0 for start';
+      distInp.setAttribute('aria-label', 'Distance from previous waypoint in km');
+      distInp.className = 'border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-300';
+
+      const del = document.createElement('button');
+      del.textContent = '×';
+      del.className = 'text-red-300 hover:text-red-500 font-bold text-lg';
+      del.setAttribute('aria-label', 'Remove waypoint');
+      del.addEventListener('click', () => row.remove());
+
+      [nameInp, elevInp, distInp, del].forEach(el => row.appendChild(el));
+      list.appendChild(row);
+    }
+
+    document.getElementById('addWpBtn').addEventListener('click', () => addWaypointRow(null));
+
+    function getWaypoints() {
+      const rows = document.querySelectorAll('.waypoint-row');
+      return Array.from(rows).map(row => {
+        const inputs = row.querySelectorAll('input');
+        return {
+          name: inputs[0].value.trim(),
+          elevation: parseFloat(inputs[1].value),
+          dist: parseFloat(inputs[2].value) || 0
+        };
+      }).filter(w => !isNaN(w.elevation));
+    }
+
+    const paceSlider = document.getElementById('paceSlider');
+    paceSlider.addEventListener('input', () => {
+      const v = parseFloat(paceSlider.value);
+      let label = '';
+      if (v <= 2) label = 'Slow';
+      else if (v <= 3.5) label = 'Moderate';
+      else if (v <= 5) label = 'Brisk';
+      else label = 'Fast';
+      document.getElementById('paceLabel').textContent = `${label} (${v} km/h)`;
+    });
+
+    function difficultyRating(ascent, totalDist) {
+      // Shenandoah method: sqrt(gain_ft * 2 * dist_miles) > 50=easy, >100=mod, >200=hard
+      const gain_ft = ascent * 3.28084;
+      const dist_mi = totalDist * 0.621371;
+      const rating = Math.sqrt(gain_ft * 2 * dist_mi);
+      if (rating < 50) return { label: 'Easy', color: 'text-green-600' };
+      if (rating < 100) return { label: 'Moderate', color: 'text-yellow-500' };
+      if (rating < 200) return { label: 'Hard', color: 'text-orange-500' };
+      return { label: 'Strenuous', color: 'text-red-600' };
+    }
+
+    // Naismith's Rule: 1h per 5km + 1h per 600m ascent
+    function estimateTime(dist, ascent, pace) {
+      const paceTime = dist / pace; // hours
+      const ascentTime = ascent / 600; // hours
+      const totalHrs = paceTime + ascentTime;
+      const hrs = Math.floor(totalHrs);
+      const mins = Math.round((totalHrs - hrs) * 60);
+      return `${hrs}h ${mins}m`;
+    }
+
+    // MET ~4 for moderate hiking, higher for steep
+    function estimateCalories(dist, ascent, weight, pace) {
+      const met = 3.5 + (pace > 4 ? 1.5 : 0) + (ascent / dist > 50 ? 1.5 : 0);
+      const timeHrs = dist / pace + ascent / 600;
+      return Math.round(met * weight * timeHrs);
+    }
+
+    function renderProfile(wps) {
+      const container = document.getElementById('elevProfile');
+      container.innerHTML = '';
+      if (wps.length < 2) { const p = document.createElement('p'); p.className='text-xs text-gray-300 m-auto'; p.textContent='Add waypoints and calculate'; container.appendChild(p); return; }
+      const elevs = wps.map(w => w.elevation);
+      const minE = Math.min(...elevs);
+      const maxE = Math.max(...elevs);
+      const range = maxE - minE || 1;
+      wps.forEach((w, i) => {
+        const col = document.createElement('div');
+        col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;';
+        const pct = ((w.elevation - minE) / range * 80) + 10;
+        const bar = document.createElement('div');
+        bar.style.cssText = `width:100%;height:${pct}%;background:linear-gradient(to top,#0d9488,#5eead4);border-radius:3px 3px 0 0;`;
+        bar.setAttribute('title', w.name + ': ' + w.elevation + 'm');
+        col.appendChild(bar);
+        container.appendChild(col);
+      });
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', () => {
+      const wps = getWaypoints();
+      if (wps.length < 2) { alert('Please add at least 2 waypoints with elevation values.'); return; }
+
+      let totalAscent = 0, totalDescent = 0, totalDist = 0, maxGradePct = 0;
+      const segments = [];
+
+      for (let i = 1; i < wps.length; i++) {
+        const dElev = wps[i].elevation - wps[i-1].elevation;
+        const dDist = wps[i].dist || 0.1; // km
+        totalDist += dDist;
+        if (dElev > 0) totalAscent += dElev;
+        else totalDescent += Math.abs(dElev);
+        const gradePct = Math.abs(dElev / (dDist * 1000)) * 100;
+        if (gradePct > maxGradePct) maxGradePct = gradePct;
+        segments.push({ from: wps[i-1].name, to: wps[i].name, dist: dDist, dElev, grade: gradePct.toFixed(1) });
+      }
+
+      const pace = parseFloat(paceSlider.value);
+      const weight = parseFloat(document.getElementById('bodyWeight').value) || 70;
+      const diff = difficultyRating(totalAscent, totalDist);
+      const time = estimateTime(totalDist, totalAscent, pace);
+      const cals = estimateCalories(totalDist, totalAscent, weight, pace);
+
+      document.getElementById('totalAscent').textContent = '+' + Math.round(totalAscent) + 'm';
+      document.getElementById('totalDescent').textContent = '-' + Math.round(totalDescent) + 'm';
+      document.getElementById('maxGrade').textContent = maxGradePct.toFixed(1) + '%';
+      const diffEl = document.getElementById('difficulty');
+      diffEl.textContent = diff.label;
+      diffEl.className = 'text-xl font-bold ' + diff.color;
+      document.getElementById('totalDist').textContent = totalDist.toFixed(1) + ' km';
+      document.getElementById('estTime').textContent = time;
+      document.getElementById('calories').textContent = cals.toLocaleString() + ' kcal';
+
+      renderProfile(wps);
+
+      // Waypoint table
+      const tableContainer = document.getElementById('waypointTable');
+      tableContainer.innerHTML = '';
+      const table = document.createElement('table');
+      table.className = 'w-full text-xs';
+      const thead = document.createElement('thead');
+      const htr = document.createElement('tr');
+      ['Waypoint','Elev (m)','Dist (km)','Elev Change','Grade %','Cumul Dist'].forEach(h => {
+        const th = document.createElement('th');
+        th.className = 'text-left text-gray-400 pb-2 pr-2';
+        th.textContent = h; htr.appendChild(th);
+      });
+      thead.appendChild(htr); table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      let cumDist = 0;
+      wps.forEach((w, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-50 hover:bg-teal-50';
+        if (i > 0) cumDist += wps[i].dist || 0;
+        const seg = segments[i-1];
+        const cells = [
+          w.name || 'WP'+(i+1), w.elevation,
+          i === 0 ? 'Start' : (w.dist || 0).toFixed(2),
+          i === 0 ? '—' : (seg.dElev >= 0 ? '+' : '') + Math.round(seg.dElev) + 'm',
+          i === 0 ? '—' : seg.grade + '%',
+          cumDist.toFixed(2) + ' km'
+        ];
+        cells.forEach(v => {
+          const td = document.createElement('td');
+          td.className = 'py-1.5 pr-2'; td.textContent = v; tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableContainer.appendChild(table);
+
+      // save state
+      save({ wps, pace, weight });
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const wps = getWaypoints();
+      if (!wps.length) return;
+      const header = 'Name,Elevation(m),DistFromPrev(km)';
+      const rows = wps.map(w => [w.name, w.elevation, w.dist].join(','));
+      const csv = [header,...rows].join('\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='trail-waypoints.csv'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // init with defaults
+    defaultWaypoints.forEach(wp => addWaypointRow(wp));
+  </script>
+</body>
+</html>
